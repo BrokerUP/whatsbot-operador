@@ -30,7 +30,7 @@ jobs:
 
       - name: Build APK
         run: |
-          # resposta automática "yes" para o aviso de rodar como root
+          # responde "yes" automaticamente ao aviso de rodar como root
           yes | buildozer --storage-dir=buildozer-out android debug
 
       - name: Debug: list all generated files
