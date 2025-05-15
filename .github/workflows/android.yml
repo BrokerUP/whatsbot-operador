@@ -1,8 +1,6 @@
 name: Build Android APK
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -10,36 +8,58 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1) Faz checkout do código
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup Java 17
+      # 2) Prepara Java 17 e Python
+      - name: Setup Java & Python
         uses: actions/setup-java@v3
         with:
           distribution: temurin
           java-version: '17'
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
 
+      # 3) Instala dependências de SO
       - name: Install system deps
         run: |
           sudo apt-get update -qq
           sudo apt-get install -qq -y python3-pip git zip unzip openjdk-17-jdk-headless
 
+      # 4) Cria e ativa virtualenv
+      - name: Create & activate venv
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+
+      # 5) Instala Cython e Buildozer dentro do venv
       - name: Install Buildozer & Cython
         run: |
-          python3 -m pip install --upgrade pip setuptools cython buildozer
+          pip install --upgrade pip setuptools cython
+          pip install buildozer
 
+      # 6) Gera spec se ainda não existir
+      - name: Init buildozer.spec
+        run: |
+          if [ ! -f buildozer.spec ]; then
+            yes | buildozer init
+          fi
+
+      # 7) Compila o APK (responde "yes" ao aviso de root)
       - name: Build APK
         run: |
-          # responde "yes" automaticamente ao aviso de rodar como root
-          yes | buildozer --storage-dir=buildozer-out android debug
+          source .venv/bin/activate
+          yes | buildozer --storage-dir=buildozer-out -v android debug
 
-      - name: Debug: list all generated files
-        run: |
-          echo "==== Conteúdo da workspace ==== "
-          find . -maxdepth 4 | sed 's/^/ /'
+      # 8) Lista o que foi gerado (debug)
+      - name: List workspace
+        run: find . -maxdepth 4 | sed 's/^/ /'
 
+      # 9) Publica o APK como artefato
       - name: Upload APK artifact
         uses: actions/upload-artifact@v3
         with:
           name: whatsbotoperador-apk
-          path: '**/*.apk'
+          path: buildozer-out/bin/*.apk
