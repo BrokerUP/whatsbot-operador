@@ -2,7 +2,8 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -10,37 +11,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      # 1) Puxa o código
+      - name: Checkout
         uses: actions/checkout@v3
 
+      # 2) Java 17
       - name: Setup Java 17
         uses: actions/setup-java@v3
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Install system deps
+      # 3) Dependências de sistema
+      - name: Install System Packages
         run: |
           sudo apt-get update -qq
           sudo apt-get install -qq -y python3-pip git zip unzip openjdk-17-jdk-headless
 
+      # 4) Buildozer & Cython
       - name: Install Buildozer & Cython
         run: |
           python3 -m pip install --upgrade pip setuptools cython buildozer
 
+      # 5) Compila o APK
       - name: Build APK
         run: |
-          # se você usar virtualenv, ative aqui (caso contrário comente a linha abaixo)
-          # source venv/bin/activate
-          # responde "yes" automaticamente ao aviso de rodar como root
           yes | buildozer --storage-dir=buildozer-out android debug
 
-      - name: Debug: list all files
+      # 6) Debug: lista o conteúdo gerado
+      - name: List Workspace Files
         run: |
           echo "=== Conteúdo da workspace ==="
           find . -maxdepth 5 | sed 's/^/ /'
 
-      - name: Upload APK artifact
+      # 7) Publica o APK como artefato
+      - name: Upload APK
         uses: actions/upload-artifact@v3
         with:
           name: whatsbotoperador-apk
