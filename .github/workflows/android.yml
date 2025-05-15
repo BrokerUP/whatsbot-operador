@@ -1,6 +1,8 @@
 name: Build Android APK
 
 on:
+  push:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -17,39 +19,29 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Python 3
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-
       - name: Install system deps
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y python3-pip git zip unzip openjdk-17-jdk-headless
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y python3-pip git zip unzip openjdk-17-jdk-headless
 
-      - name: Create & activate venv
+      - name: Install Buildozer & Cython
         run: |
-          python3 -m venv venv
-          source venv/bin/activate
-
-      - name: Install Cython & Buildozer
-        run: |
-          pip install --upgrade pip setuptools cython buildozer
-
-      - name: Init buildozer.spec if missing
-        run: |
-          source venv/bin/activate
-          if [ ! -f buildozer.spec ]; then
-            yes | buildozer init
-          fi
+          python3 -m pip install --upgrade pip setuptools cython buildozer
 
       - name: Build APK
         run: |
-          source venv/bin/activate
+          # se você usar virtualenv, ative aqui (caso contrário comente a linha abaixo)
+          # source venv/bin/activate
+          # responde "yes" automaticamente ao aviso de rodar como root
           yes | buildozer --storage-dir=buildozer-out android debug
+
+      - name: Debug: list all files
+        run: |
+          echo "=== Conteúdo da workspace ==="
+          find . -maxdepth 5 | sed 's/^/ /'
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v3
         with:
           name: whatsbotoperador-apk
-          path: buildozer-out/bin/*.apk
+          path: '**/*.apk'
