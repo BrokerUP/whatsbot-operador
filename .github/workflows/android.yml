@@ -32,8 +32,13 @@ jobs:
       run: |
         yes | buildozer --storage-dir=buildozer-out android debug
 
+    - name: Debug: list all generated files
+      run: |
+        echo "==== Conteúdo da workspace ==== "
+        find . -maxdepth 4 | sed 's/^/ /'
+
     - name: Upload APK artifact
       uses: actions/upload-artifact@v3
       with:
         name: whatsbotoperador-apk
-        path: buildozer-out/android/platform/build-*/app/bin/*.apk
+        path: '**/*.apk'
