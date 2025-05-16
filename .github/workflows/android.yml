@@ -2,8 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -11,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Setup Java 17
@@ -20,7 +19,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Install System Packages
+      - name: Install system deps
         run: |
           sudo apt-get update -qq
           sudo apt-get install -qq -y python3-pip git zip unzip openjdk-17-jdk-headless
@@ -31,9 +30,23 @@ jobs:
 
       - name: Build APK
         run: |
-          yes | buildozer --storage-dir=buildozer-out android debug
+          # garante que exista a pasta de saída
+          mkdir -p buildozer-out
+          # roda o Buildozer como root, captura todo o log em build.log
+          yes | buildozer --storage-dir=buildozer-out android debug --log-level 2 \
+            > buildozer-out/build.log 2>&1 || true
+          # exibe só as 50 últimas linhas para a gente debugar rapidamente
+          echo "=== Últimas 50 linhas do buildozer-out/build.log ==="
+          tail -n 50 buildozer-out/build.log
 
-      - name: List Workspace Files
+      - name: Debug: list all generated files
         run: |
-          echo "=== Workspace ==="
-          find . -maxdepth 5 | sed 's/^/ /'
+          echo "==== Conteúdo da workspace (até profundidade 4) ===="
+          find . -maxdepth 4 | sed 's/^/ /'
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: whatsbotoperador-apk
+          # ajuste o path se seu APK ficar em outra subpasta
+          path: buildozer-out/bin/*.apk
