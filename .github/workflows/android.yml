@@ -2,7 +2,8 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -10,43 +11,47 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      # 1) Puxa o seu código
+      - uses: actions/checkout@v3
 
-      - name: Setup Java 17
+      # 2) Instala o Java 17
+      - name: Set up Java 17
         uses: actions/setup-java@v3
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Install system deps
+      # 3) Instala dependências do sistema
+      - name: Install system dependencies
         run: |
           sudo apt-get update -qq
           sudo apt-get install -qq -y python3-pip git zip unzip openjdk-17-jdk-headless
 
+      # 4) Instala Cython e Buildozer
       - name: Install Buildozer & Cython
         run: |
           python3 -m pip install --upgrade pip setuptools cython buildozer
 
+      # 5) Compila o APK (responde "yes" ao aviso de rodar como root)
       - name: Build APK
         run: |
-          # garante que exista a pasta de saída
           mkdir -p buildozer-out
-          # roda o Buildozer como root, captura todo o log em build.log
           yes | buildozer --storage-dir=buildozer-out android debug --log-level 2 \
             > buildozer-out/build.log 2>&1 || true
-          # exibe só as 50 últimas linhas para a gente debugar rapidamente
+          echo
           echo "=== Últimas 50 linhas do buildozer-out/build.log ==="
           tail -n 50 buildozer-out/build.log
 
-      - name: Debug: list all generated files
+      # 6) Lista o conteúdo gerado para debug rápido
+      - name: List workspace files
         run: |
+          echo
           echo "==== Conteúdo da workspace (até profundidade 4) ===="
-          find . -maxdepth 4 | sed 's/^/ /'
+          find . -maxdepth 4 | sed 's/^/  /'
 
+      # 7) Faz o upload do APK como artefato
       - name: Upload APK artifact
         uses: actions/upload-artifact@v3
         with:
           name: whatsbotoperador-apk
-          # ajuste o path se seu APK ficar em outra subpasta
           path: buildozer-out/bin/*.apk
